@@ -1,60 +1,65 @@
-from flask import Flask, render_template, request, send_file, make_response
-import subprocess, os, uuid, io, zipfile
+from flask import Flask, render_template, request, send_file
+import subprocess
+import os
+import uuid
 from PIL import Image
-from werkzeug.utils import secure_filename
 import fitz  # PyMuPDF
 
 app = Flask(__name__)
-BASE = os.path.dirname(__file__)
-UPLOAD = os.path.join(BASE, "uploads")
-OUT = os.path.join(BASE, "output")
+UPLOAD = "uploads"
+OUTPUT = "output"
 os.makedirs(UPLOAD, exist_ok=True)
-os.makedirs(OUT, exist_ok=True)
+os.makedirs(OUTPUT, exist_ok=True)
 
-@app.route("/")
+@app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
 
+def run_ghostscript(input_path, output_path, level):
+    subprocess.run([
+        "gswin64c" if os.name == "nt" else "gs",
+        "-sDEVICE=pdfwrite", "-dCompatibilityLevel=1.4",
+        f"-dPDFSETTINGS={level}", "-dNOPAUSE", "-dQUIET", "-dBATCH",
+        f"-sOutputFile={output_path}", input_path
+    ], check=True)
+
 @app.route("/compress", methods=["POST"])
 def compress():
-    f = request.files["pdf_file"]
-    lvl = request.form.get("level", "/screen")
-    kb = int(request.form.get("size_kb", 500))
-    in_path = os.path.join(UPLOAD, secure_filename(f.filename))
-    out_path = os.path.join(OUT, f"{uuid.uuid4().hex}_comp.pdf")
-    f.save(in_path)
-    subprocess.run([
-        "gswin64c", "-sDEVICE=pdfwrite",
-        "-dCompatibilityLevel=1.4", f"-dPDFSETTINGS={lvl}",
-        "-dNOPAUSE","-dQUIET","-dBATCH",
-        f"-sOutputFile={out_path}", in_path
-    ], check=True)
-    return send_file(out_path, as_attachment=True,
-                     download_name="compressed.pdf")
+    file = request.files.getlist("file")[0]
+    level = request.form.get("level", "/screen")
+    size_kb = request.form.get("size_kb", type=int)
+    file_id = uuid.uuid4().hex
+    in_path = os.path.join(UPLOAD, file_id + "_" + file.filename)
+    out_path = os.path.join(OUTPUT, file_id + "_compressed.pdf")
+    file.save(in_path)
+    run_ghostscript(in_path, out_path, level)
+    return send_file(out_path, as_attachment=True, download_name=file.filename)
 
-@app.route("/img-to-pdf", methods=["POST"])
-def img_to_pdf():
-    imgs = request.files.getlist("images[]")
-    pil_imgs = [Image.open(i.stream).convert("RGB") for i in imgs]
-    out_path = os.path.join(OUT, f"{uuid.uuid4().hex}_images.pdf")
-    pil_imgs[0].save(out_path, save_all=True, append_images=pil_imgs[1:])
-    return send_file(out_path, as_attachment=True,
-                     download_name="from_images.pdf")
+@app.route("/pdf-to-jpeg", methods=["POST"])
+def pdf_to_jpeg():
+    file = request.files.getlist("file")[0]
+    file_id = uuid.uuid4().hex
+    in_path = os.path.join(UPLOAD, file_id + "_" + file.filename)
+    file.save(in_path)
+    doc = fitz.open(in_path)
+    jpg_paths = []
+    for i in range(len(doc)):
+        pix = doc[i].get_pixmap()
+        jpg_file = os.path.join(OUTPUT, f"{file_id}_page_{i+1}.jpg")
+        pix.save(jpg_file)
+        jpg_paths.append(jpg_file)
+    # Return first page only for now
+    return send_file(jpg_paths[0], as_attachment=True, download_name=os.path.splitext(file.filename)[0] + ".jpg")
 
-@app.route("/pdf-to-img", methods=["POST"])
-def pdf_to_img():
-    f = request.files["pdf_for_jpg"]
-    doc = fitz.open(stream=f.read(), filetype="pdf")
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w") as zf:
-        for i, pg in enumerate(doc, start=1):
-            pix = pg.get_pixmap(dpi=150)
-            zf.writestr(f"page_{i}.jpg", pix.tobytes("jpg"))
-    buf.seek(0)
-    resp = make_response(buf.read())
-    resp.headers["Content-Type"] = "application/zip"
-    resp.headers["Content-Disposition"] = 'attachment; filename=pdf_pages.zip'
-    return resp
+@app.route("/jpeg-to-pdf", methods=["POST"])
+def jpeg_to_pdf():
+    file = request.files.getlist("file")[0]
+    file_id = uuid.uuid4().hex
+    in_path = os.path.join(UPLOAD, file_id + "_" + file.filename)
+    out_pdf = os.path.join(OUTPUT, file_id + "_converted.pdf")
+    img = Image.open(file.stream).convert("RGB")
+    img.save(out_pdf, "PDF", resolution=100.0)
+    return send_file(out_pdf, as_attachment=True, download_name=os.path.splitext(file.filename)[0] + ".pdf")
 
 if __name__ == "__main__":
     app.run(debug=True)
