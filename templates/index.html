@@ -1,238 +1,269 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>🛠️ PDF & Image Toolset</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <title>PDF Compressor & Converter</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome -->
+  <script src="https://kit.fontawesome.com/YOUR_FA_KIT.js" crossorigin="anonymous"></script>
+
   <style>
+    * { box-sizing: border-box; }
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f0f0f0;
-      color: #000;
-      margin: 0;
-      padding: 40px 20px;
-      transition: background 0.3s, color 0.3s;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg,#f5f7fa,#c3cfe2);
+      color: #333; margin:0; padding:40px 20px;
+      display:flex;flex-direction:column;align-items:center;
+      transition:background 0.5s ease;
     }
     .dark-mode {
-      background: #121212;
-      color: #f0f0f0;
-    }
-    .toggle-btn {
-      position: fixed;
-      top: 20px; right: 20px;
-      background: #444; color: #fff;
-      border: none; padding: 8px 18px;
-      border-radius: 20px; cursor: pointer;
-      z-index: 1000;
+      background: linear-gradient(135deg,#1e1e2f,#121212);
+      color:#eee;
     }
     h1 {
-      text-align: center;
-      margin-bottom: 40px;
+      font-size:2.4rem; margin-bottom:20px;
+      color:#444; text-shadow:1px 1px rgba(0,0,0,0.1);
+      animation:fadeInScale 0.6s ease;
     }
-    .container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-      max-width: 1200px;
-      margin: 0 auto;
+
+    .toggle-btn {
+      position:fixed;top:20px;right:20px;
+      background:#4a4a4a;color:white;
+      padding:8px 16px;border:none;border-radius:20px;
+      cursor:pointer;transition:background 0.3s ease;
+      animation:fadeIn 0.6s ease 0.3s backwards;
     }
-    .tool-box {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      padding: 20px;
-      transition: background 0.3s, box-shadow 0.3s;
+    .toggle-btn:hover { background:#2c2c2c; }
+
+    .upload-box {
+      border:2px dashed #888;
+      background-color:#fff7;
+      padding:30px;
+      border-radius:12px;
+      text-align:center;
+      margin-bottom:20px;
+      cursor:pointer;
+      width:300px;
+      transition:all 0.3s ease;
+      animation:fadeIn 0.6s ease 0.5s backwards;
     }
-    .dark-mode .tool-box {
-      background: #1f1f1f;
-      box-shadow: 0 2px 10px rgba(255,255,255,0.05);
+    .upload-box:hover {
+      background:#f0f0f0;border-color:#555;
+      transform:scale(1.02);
     }
-    .tool-box h2 {
-      margin-top: 0;
+    .dark-mode .upload-box {
+      background:#292929;border-color:#aaa;
     }
-    .tool-box form {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+
+    form {
+      display:flex;flex-direction:column;gap:15px;
+      align-items:center;
+      animation:fadeIn 0.6s ease 0.7s backwards;
     }
-    .tool-box input[type=file],
-    .tool-box select,
-    .tool-box input[type=range],
-    .tool-box button {
-      width: 100%;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      transition: background 0.3s, color 0.3s;
+    select,input[type="range"],button {
+      width:300px;padding:10px;
+      border-radius:8px;border:1px solid #ccc;
+      font-size:15px;transition:0.3s;
     }
-    .dark-mode .tool-box input,
-    .dark-mode .tool-box select,
-    .dark-mode .tool-box button {
-      background: #2a2a2a;
-      color: #f0f0f0;
-      border-color: #555;
+    button {
+      background-color:#4caf50;
+      color:white;font-weight:600;
+      cursor:pointer;border:none;
+      display:flex;align-items:center;
+      justify-content:center;gap:8px;
     }
-    .tool-box button {
-      background: #4285f4;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-    }
-    .tool-box button:hover {
-      background: #3367d6;
-    }
+    button:hover { background-color:#45a049; }
+
+    .dark-mode button { background-color:#3e8e41; }
+
     .progress-bar {
-      width: 100%;
-      height: 6px;
-      background: #ddd;
-      border-radius: 3px;
-      overflow: hidden;
-      display: none;
-      margin-top: 6px;
+      width:300px;height:8px;background:#ddd;
+      border-radius:5px;overflow:hidden;
+      display:none;
+      animation:fadeIn 0.6s ease 0.9s backwards;
     }
-    .progress-bar .progress {
-      height: 100%;
-      background: #4caf50;
-      width: 0%;
+    .progress {
+      height:100%;background:#4caf50;
+      width:0%;transition:width 0.4s ease-in-out;
     }
-    .preview {
-      font-size: 14px;
-      color: #444;
-    }
-    .dark-mode .preview {
-      color: #ccc;
-    }
+
     .toast {
-      position: fixed;
-      bottom: 20px; right: 20px;
-      background: #4caf50;
-      color: #fff;
-      padding: 12px 24px;
-      border-radius: 6px;
-      display: none;
+      background:#4caf50;color:white;
+      padding:12px 20px;border-radius:6px;
+      position:fixed;bottom:25px;right:25px;
+      display:none;
+      animation:fadeIn 0.5s ease;
     }
+
+    .preview {
+      text-align:left;font-size:14px;
+      color:#555;
+      max-width:300px;
+      word-break:break-word;
+      animation:fadeIn 0.6s ease 1.1s backwards;
+    }
+    .dark-mode .preview { color:#ccc; }
+
     .author-tag {
-      position: fixed;
-      right: -20px; top: 50%;
-      transform: translateY(-50%) rotate(90deg);
-      font-size: 14px;
-      font-weight: bold;
-      color: #888;
-      letter-spacing: 2px;
-      user-select: none;
+      position:fixed;right:10px;top:50%;
+      transform:translateY(-50%);
+      writing-mode:vertical-rl;
+      font-weight:600;font-size:14px;color:#888;
+      pointer-events:none;
+      animation:fadeIn 0.6s ease 1.3s backwards;
     }
-    .dark-mode .author-tag {
-      color: #aaa;
+    .dark-mode .author-tag { color:#aaa; }
+
+    @keyframes fadeIn {
+      from { opacity:0; transform:translateY(10px); }
+      to { opacity:1; transform:translateY(0); }
     }
-    @media (max-width: 600px) {
-      .author-tag { display: none; }
+    @keyframes fadeInScale {
+      from { opacity:0; transform:scale(0.9); }
+      to { opacity:1; transform:scale(1); }
     }
   </style>
 </head>
+
 <body>
+  <button class="toggle-btn" onclick="toggleDarkMode()">
+    <i class="fas fa-moon"></i> Toggle
+  </button>
 
-  <button class="toggle-btn" onclick="toggleDarkMode()">🌗 Mode</button>
-  <h1>🛠️ PDF & Image Toolbox</h1>
-  <div class="container">
+  <h1><i class="fas fa-file-upload"></i> PDF Compressor & Converter</h1>
 
-    <!-- 🔧 PDF Compressor -->
-    <div class="tool-box">
-      <h2>📄 Compress PDF</h2>
-      <form id="form-compress">
-        <input type="file" name="pdf_file" accept="application/pdf" required>
-        <select name="level">
-          <option value="/screen">Low Quality</option>
-          <option value="/ebook">Medium</option>
-          <option value="/printer">High</option>
-        </select>
-        <label>
-          Target Size: <span id="label-compress-size">500 KB</span>
-        </label>
-        <input type="range" name="size_kb" min="10" max="5120" value="500" id="compress-range">
-        <button type="submit">Compress</button>
-        <div class="progress-bar"><div class="progress"></div></div>
-      </form>
+  <form id="uploadForm">
+    <div class="upload-box"
+         onclick="document.getElementById('fileInput').click();"
+         ondragover="event.preventDefault();"
+         ondrop="handleDrop(event)">
+      <p><i class="fas fa-cloud-upload-alt fa-2x"></i></p>
+      Drag & drop your PDF(s) here or click to select
+      <input type="file" id="fileInput" name="pdf_files[]" multiple accept="application/pdf" style="display:none;">
     </div>
 
-    <!-- 🖼️ Image → PDF -->
-    <div class="tool-box">
-      <h2>🖼️ Image to PDF</h2>
-      <form id="form-img2pdf">
-        <input type="file" name="images[]" accept="image/jpeg,image/png" multiple required>
-        <button type="submit">Convert</button>
-        <div class="progress-bar"><div class="progress"></div></div>
-      </form>
+    <select name="level" id="level">
+      <option value="/screen">Low Quality</option>
+      <option value="/ebook">Medium Quality</option>
+      <option value="/printer">High Quality</option>
+    </select>
+
+    <label for="sizeRange">Target Size: <span id="sizeLabel">500 KB</span></label>
+    <input type="range" id="sizeRange" min="10" max="5120" step="10" value="500" oninput="updateSizeLabel()">
+
+    <button type="submit">
+      <i class="fas fa-compress"></i> Compress
+    </button>
+
+    <div class="progress-bar" id="progressBar">
+      <div class="progress" id="progress"></div>
     </div>
 
-    <!-- 🧲 PDF → JPEG(s) -->
-    <div class="tool-box">
-      <h2>✅ PDF to JPEG</h2>
-      <form id="form-pdf2img">
-        <input type="file" name="pdf_for_jpg" accept="application/pdf" required>
-        <button type="submit">Extract</button>
-        <div class="progress-bar"><div class="progress"></div></div>
-      </form>
-    </div>
+    <div class="preview" id="previewArea"></div>
+  </form>
 
-  </div>
+  <div class="toast" id="toast"></div>
 
-  <div class="toast" id="toast">✅ Done!</div>
-  <div class="author-tag">Made By Sunny Gupta</div>
+  <div class="author-tag">Made by Sunny Gupta</div>
 
   <script>
     function toggleDarkMode() {
-      document.body.classList.toggle("dark-mode");
+      document.body.classList.toggle('dark-mode');
     }
 
-    // Update label
-    const cr = document.getElementById("compress-range");
-    const lb = document.getElementById("label-compress-size");
-    cr.oninput = () => {
-      const v = cr.value;
-      lb.innerText = (v < 1024 ? v + " KB" : (v/1024).toFixed(1) + " MB");
-    };
+    function updateSizeLabel() {
+      const size = document.getElementById("sizeRange").value;
+      document.getElementById("sizeLabel").innerText =
+        size < 1024 ? `${size} KB` : `${(size / 1024).toFixed(1)} MB`;
+    }
 
-    // Shared AJAX form handler
-    function setupForm(formId, url){
-      const f = document.getElementById(formId);
-      const pb = f.querySelector(".progress-bar");
-      const pg = pb.querySelector(".progress");
-      f.onsubmit = e => {
-        e.preventDefault();
-        const fd = new FormData(f);
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", url, true);
-        xhr.responseType = "blob";
-        xhr.onloadstart = () => { pb.style.display = "block"; pg.style.width = "0%"; };
-        xhr.upload.onprogress = ev => {
-          if(ev.lengthComputable) pg.style.width = (ev.loaded/ev.total*100) + "%";
-        };
-        xhr.onload = () => {
-          if(xhr.status === 200){
-            const disp = xhr.getResponseHeader("Content-Disposition") || "";
-            let fname = "output";
-            const m = disp.match(/filename="?(.+)"?/);
-            if(m) fname = m[1];
-            const blob = xhr.response;
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = fname;
-            a.click();
-            document.getElementById("toast").style.display = "block";
-            setTimeout(() => document.getElementById("toast").style.display = "none", 3000);
-          } else {
-            alert("Error: " + xhr.status);
-          }
-          pb.style.display = "none";
-        };
-        xhr.send(fd);
+    function handleDrop(event) {
+      event.preventDefault();
+      const files = event.dataTransfer.files;
+      document.getElementById("fileInput").files = files;
+      updatePreview(files);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      toast.innerText = msg;
+      toast.style.display = "block";
+      setTimeout(() => toast.style.display = "none", 3000);
+    }
+
+    function updatePreview(files) {
+      const preview = document.getElementById("previewArea");
+      preview.innerHTML = "";
+      if (files.length === 0) {
+        preview.innerText = "No files selected.";
+        return;
+      }
+      const ul = document.createElement("ul");
+      Array.from(files).forEach(f => {
+        const li = document.createElement("li");
+        li.textContent = f.name;
+        ul.appendChild(li);
+      });
+      preview.appendChild(ul);
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function() {
+      updatePreview(this.files);
+    });
+
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData();
+      const files = document.getElementById('fileInput').files;
+      const level = document.getElementById('level').value;
+      const size = document.getElementById('sizeRange').value;
+      if (files.length === 0) {
+        alert("Please select at least one file!");
+        return;
+      }
+      Array.from(files).forEach(f => formData.append('pdf_files[]', f));
+      formData.append('level', level);
+      formData.append('size_kb', size);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/compress", true);
+      xhr.responseType = "blob";
+
+      xhr.onloadstart = () => {
+        document.getElementById("progressBar").style.display = "block";
+        document.getElementById("progress").style.width = "0%";
       };
-    }
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          document.getElementById("progress").style.width = (e.loaded / e.total * 100) + "%";
+        }
+      };
+      xhr.onload = () => {
+        if(xhr.status === 200) {
+          const blob = xhr.response;
+          const filename = xhr.getResponseHeader('Content-Disposition')
+            ?.match(/filename="?(.+)"?/)?.[1] || "compressed.pdf";
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = filename;
+          link.click();
+          showToast("✅ Compression successful!");
+        } else {
+          alert("Compression failed.");
+        }
+        document.getElementById("progressBar").style.display = "none";
+      };
+      xhr.onerror = () => {
+        alert("Error during compression.");
+        document.getElementById("progressBar").style.display = "none";
+      };
+      xhr.send(formData);
+    });
 
-    setupForm("form-compress", "/compress");
-    setupForm("form-img2pdf", "/img-to-pdf");
-    setupForm("form-pdf2img", "/pdf-to-img");
+    updateSizeLabel();
   </script>
-
 </body>
 </html>
