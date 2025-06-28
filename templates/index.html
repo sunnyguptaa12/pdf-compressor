@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🛠️ PDF & Image Toolset</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f0f0;
+      color: #000;
+      margin: 0;
+      padding: 40px 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+    .dark-mode {
+      background: #121212;
+      color: #f0f0f0;
+    }
+    .toggle-btn {
+      position: fixed;
+      top: 20px; right: 20px;
+      background: #444; color: #fff;
+      border: none; padding: 8px 18px;
+      border-radius: 20px; cursor: pointer;
+      z-index: 1000;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .tool-box {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .dark-mode .tool-box {
+      background: #1f1f1f;
+      box-shadow: 0 2px 10px rgba(255,255,255,0.05);
+    }
+    .tool-box h2 {
+      margin-top: 0;
+    }
+    .tool-box form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .tool-box input[type=file],
+    .tool-box select,
+    .tool-box input[type=range],
+    .tool-box button {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      transition: background 0.3s, color 0.3s;
+    }
+    .dark-mode .tool-box input,
+    .dark-mode .tool-box select,
+    .dark-mode .tool-box button {
+      background: #2a2a2a;
+      color: #f0f0f0;
+      border-color: #555;
+    }
+    .tool-box button {
+      background: #4285f4;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    .tool-box button:hover {
+      background: #3367d6;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: #ddd;
+      border-radius: 3px;
+      overflow: hidden;
+      display: none;
+      margin-top: 6px;
+    }
+    .progress-bar .progress {
+      height: 100%;
+      background: #4caf50;
+      width: 0%;
+    }
+    .preview {
+      font-size: 14px;
+      color: #444;
+    }
+    .dark-mode .preview {
+      color: #ccc;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px; right: 20px;
+      background: #4caf50;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 6px;
+      display: none;
+    }
+    .author-tag {
+      position: fixed;
+      right: -20px; top: 50%;
+      transform: translateY(-50%) rotate(90deg);
+      font-size: 14px;
+      font-weight: bold;
+      color: #888;
+      letter-spacing: 2px;
+      user-select: none;
+    }
+    .dark-mode .author-tag {
+      color: #aaa;
+    }
+    @media (max-width: 600px) {
+      .author-tag { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="toggle-btn" onclick="toggleDarkMode()">🌗 Mode</button>
+  <h1>🛠️ PDF & Image Toolbox</h1>
+  <div class="container">
+
+    <!-- 🔧 PDF Compressor -->
+    <div class="tool-box">
+      <h2>📄 Compress PDF</h2>
+      <form id="form-compress">
+        <input type="file" name="pdf_file" accept="application/pdf" required>
+        <select name="level">
+          <option value="/screen">Low Quality</option>
+          <option value="/ebook">Medium</option>
+          <option value="/printer">High</option>
+        </select>
+        <label>
+          Target Size: <span id="label-compress-size">500 KB</span>
+        </label>
+        <input type="range" name="size_kb" min="10" max="5120" value="500" id="compress-range">
+        <button type="submit">Compress</button>
+        <div class="progress-bar"><div class="progress"></div></div>
+      </form>
+    </div>
+
+    <!-- 🖼️ Image → PDF -->
+    <div class="tool-box">
+      <h2>🖼️ Image to PDF</h2>
+      <form id="form-img2pdf">
+        <input type="file" name="images[]" accept="image/jpeg,image/png" multiple required>
+        <button type="submit">Convert</button>
+        <div class="progress-bar"><div class="progress"></div></div>
+      </form>
+    </div>
+
+    <!-- 🧲 PDF → JPEG(s) -->
+    <div class="tool-box">
+      <h2>✅ PDF to JPEG</h2>
+      <form id="form-pdf2img">
+        <input type="file" name="pdf_for_jpg" accept="application/pdf" required>
+        <button type="submit">Extract</button>
+        <div class="progress-bar"><div class="progress"></div></div>
+      </form>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast">✅ Done!</div>
+  <div class="author-tag">Made By Sunny Gupta</div>
+
+  <script>
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+
+    // Update label
+    const cr = document.getElementById("compress-range");
+    const lb = document.getElementById("label-compress-size");
+    cr.oninput = () => {
+      const v = cr.value;
+      lb.innerText = (v < 1024 ? v + " KB" : (v/1024).toFixed(1) + " MB");
+    };
+
+    // Shared AJAX form handler
+    function setupForm(formId, url){
+      const f = document.getElementById(formId);
+      const pb = f.querySelector(".progress-bar");
+      const pg = pb.querySelector(".progress");
+      f.onsubmit = e => {
+        e.preventDefault();
+        const fd = new FormData(f);
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", url, true);
+        xhr.responseType = "blob";
+        xhr.onloadstart = () => { pb.style.display = "block"; pg.style.width = "0%"; };
+        xhr.upload.onprogress = ev => {
+          if(ev.lengthComputable) pg.style.width = (ev.loaded/ev.total*100) + "%";
+        };
+        xhr.onload = () => {
+          if(xhr.status === 200){
+            const disp = xhr.getResponseHeader("Content-Disposition") || "";
+            let fname = "output";
+            const m = disp.match(/filename="?(.+)"?/);
+            if(m) fname = m[1];
+            const blob = xhr.response;
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = fname;
+            a.click();
+            document.getElementById("toast").style.display = "block";
+            setTimeout(() => document.getElementById("toast").style.display = "none", 3000);
+          } else {
+            alert("Error: " + xhr.status);
+          }
+          pb.style.display = "none";
+        };
+        xhr.send(fd);
+      };
+    }
+
+    setupForm("form-compress", "/compress");
+    setupForm("form-img2pdf", "/img-to-pdf");
+    setupForm("form-pdf2img", "/pdf-to-img");
+  </script>
+
+</body>
+</html>
