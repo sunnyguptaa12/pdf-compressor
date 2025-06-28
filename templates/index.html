@@ -3,17 +3,163 @@
 <head>
   <meta charset="UTF-8" />
   <title>PDF Compressor & Converter</title>
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/337/337946.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-  <script src="https://kit.fontawesome.com/YOUR_FA_KIT.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
-    /* [Polished CSS code from previous step here] */
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f4f4;
+      color: #333;
+      text-align: center;
+      padding: 2rem;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    h1 {
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: #2c3e50;
+    }
+
+    form {
+      max-width: 500px;
+      margin: auto;
+    }
+
+    .toggle-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: #2c3e50;
+      color: white;
+      border: none;
+      padding: 0.6rem 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.3s;
+    }
+
+    .toggle-btn:hover {
+      background: #1a252f;
+    }
+
+    select, input[type="range"], button {
+      margin-top: 1rem;
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .upload-box {
+      border: 2px dashed #bbb;
+      border-radius: 10px;
+      padding: 2rem;
+      margin: 2rem auto;
+      background: #fff;
+      cursor: pointer;
+      transition: background 0.3s ease-in-out;
+    }
+
+    .upload-box:hover {
+      background-color: #f0f8ff;
+    }
+
+    button[type="submit"] {
+      background: #007bff;
+      color: white;
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.3s ease-in-out;
+    }
+
+    button[type="submit"]:hover {
+      background: #0056b3;
+    }
+
+    #compressControls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      margin-top: 1rem;
+    }
+
+    .progress-bar {
+      height: 10px;
+      background: #ddd;
+      border-radius: 5px;
+      width: 90%;
+      margin: 1rem auto;
+      overflow: hidden;
+      display: none;
+    }
+
+    .progress {
+      height: 100%;
+      background: #28a745;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .preview {
+      margin-top: 1rem;
+      font-weight: 500;
+      color: #555;
+    }
+
+    .preview img {
+      max-width: 100%;
+      margin-top: 10px;
+      border-radius: 8px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #222;
+      color: #fff;
+      padding: 1rem 2rem;
+      border-radius: 6px;
+      z-index: 999;
+      display: none;
+    }
+
+    .author-tag {
+      margin-top: 3rem;
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    .dark-mode {
+      background: #1e1e1e;
+      color: #eee;
+    }
+
+    .dark-mode .upload-box {
+      background: #2c2c2c;
+      color: #eee;
+    }
+
+    .dark-mode .toggle-btn {
+      background: #444;
+    }
+
+    .dark-mode input[type="range"] {
+      filter: brightness(1.2);
+    }
   </style>
 </head>
 <body>
   <button class="toggle-btn" onclick="toggleDarkMode()"><i class="fas fa-moon"></i> Toggle</button>
   <h1><i class="fas fa-file-upload"></i> PDF Compressor & Converter</h1>
 
-  <!-- Section chooser -->
   <select id="modeSelect" onchange="switchMode()">
     <option value="compress">Compress PDF</option>
     <option value="pdf2jpg">PDF → JPG</option>
@@ -28,7 +174,6 @@
       <input type="file" id="fileInput" name="file" accept=".pdf,image/jpeg" style="display:none;">
     </div>
 
-    <!-- Compression-specific inputs -->
     <div id="compressControls">
       <select name="level" id="level">
         <option value="/screen">Low Quality</option>
@@ -96,7 +241,14 @@
         pr.textContent = "No file selected.";
         return;
       }
+
       pr.textContent = files[0].name;
+
+      if (files[0].type.startsWith("image/")) {
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(files[0]);
+        pr.appendChild(img);
+      }
     }
 
     function showToast(msg) {

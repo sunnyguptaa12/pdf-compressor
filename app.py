@@ -1,65 +1,101 @@
 from flask import Flask, render_template, request, send_file
-import subprocess
 import os
 import uuid
-from PIL import Image
+import subprocess
 import fitz  # PyMuPDF
+from PIL import Image
 
 app = Flask(__name__)
-UPLOAD = "uploads"
-OUTPUT = "output"
-os.makedirs(UPLOAD, exist_ok=True)
-os.makedirs(OUTPUT, exist_ok=True)
 
-@app.route("/", methods=["GET"])
+# Folder paths
+UPLOAD_FOLDER = "uploads"
+COMPRESSED_FOLDER = "compressed"
+PDF2JPEG_FOLDER = "pdf2jpeg"
+JPEG2PDF_FOLDER = "jpeg2pdf"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(COMPRESSED_FOLDER, exist_ok=True)
+os.makedirs(PDF2JPEG_FOLDER, exist_ok=True)
+os.makedirs(JPEG2PDF_FOLDER, exist_ok=True)
+
+@app.route("/")
 def index():
     return render_template("index.html")
 
-def run_ghostscript(input_path, output_path, level):
-    subprocess.run([
-        "gswin64c" if os.name == "nt" else "gs",
-        "-sDEVICE=pdfwrite", "-dCompatibilityLevel=1.4",
-        f"-dPDFSETTINGS={level}", "-dNOPAUSE", "-dQUIET", "-dBATCH",
-        f"-sOutputFile={output_path}", input_path
-    ], check=True)
-
 @app.route("/compress", methods=["POST"])
-def compress():
-    file = request.files.getlist("file")[0]
+def compress_pdf():
+    file = request.files.get("file")
     level = request.form.get("level", "/screen")
-    size_kb = request.form.get("size_kb", type=int)
+    size_kb = int(request.form.get("size_kb", 500))
+
+    if not file:
+        return "No PDF uploaded", 400
+
     file_id = uuid.uuid4().hex
-    in_path = os.path.join(UPLOAD, file_id + "_" + file.filename)
-    out_path = os.path.join(OUTPUT, file_id + "_compressed.pdf")
-    file.save(in_path)
-    run_ghostscript(in_path, out_path, level)
-    return send_file(out_path, as_attachment=True, download_name=file.filename)
+    input_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_input.pdf")
+    output_path = os.path.join(COMPRESSED_FOLDER, f"{file_id}_compressed.pdf")
+    file.save(input_path)
+
+    # Ghostscript command
+    gs_command = [
+        "gswin64c",  # use 'gs' if you're on Linux or macOS
+        "-sDEVICE=pdfwrite",
+        "-dCompatibilityLevel=1.4",
+        f"-dPDFSETTINGS={level}",
+        "-dNOPAUSE",
+        "-dQUIET",
+        "-dBATCH",
+        f"-sOutputFile={output_path}",
+        input_path
+    ]
+
+    try:
+        subprocess.run(gs_command, check=True)
+        return send_file(output_path, as_attachment=True, download_name=file.filename)
+    except subprocess.CalledProcessError:
+        return "Compression failed", 500
 
 @app.route("/pdf-to-jpeg", methods=["POST"])
 def pdf_to_jpeg():
-    file = request.files.getlist("file")[0]
+    file = request.files.get("file")
+    if not file or not file.filename.endswith(".pdf"):
+        return "No PDF uploaded", 400
+
     file_id = uuid.uuid4().hex
-    in_path = os.path.join(UPLOAD, file_id + "_" + file.filename)
-    file.save(in_path)
-    doc = fitz.open(in_path)
-    jpg_paths = []
-    for i in range(len(doc)):
-        pix = doc[i].get_pixmap()
-        jpg_file = os.path.join(OUTPUT, f"{file_id}_page_{i+1}.jpg")
-        pix.save(jpg_file)
-        jpg_paths.append(jpg_file)
-    # Return first page only for now
-    return send_file(jpg_paths[0], as_attachment=True, download_name=os.path.splitext(file.filename)[0] + ".jpg")
+    input_path = os.path.join(UPLOAD_FOLDER, f"{file_id}.pdf")
+    output_path = os.path.join(PDF2JPEG_FOLDER, f"{file_id}_output.pdf")
+    file.save(input_path)
+
+    images = []
+    try:
+        pdf = fitz.open(input_path)
+        for page in pdf:
+            pix = page.get_pixmap()
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            images.append(img.convert("RGB"))
+        pdf.close()
+        if images:
+            images[0].save(output_path, save_all=True, append_images=images[1:])
+            return send_file(output_path, as_attachment=True, download_name="converted.pdf")
+        else:
+            return "No images found in PDF", 500
+    except Exception as e:
+        return f"Error converting PDF to images: {str(e)}", 500
 
 @app.route("/jpeg-to-pdf", methods=["POST"])
 def jpeg_to_pdf():
-    file = request.files.getlist("file")[0]
+    file = request.files.get("file")
+    if not file or not file.filename.lower().endswith(".jpg"):
+        return "No JPG uploaded", 400
+
     file_id = uuid.uuid4().hex
-    in_path = os.path.join(UPLOAD, file_id + "_" + file.filename)
-    out_pdf = os.path.join(OUTPUT, file_id + "_converted.pdf")
-    img = Image.open(file.stream).convert("RGB")
-    img.save(out_pdf, "PDF", resolution=100.0)
-    return send_file(out_pdf, as_attachment=True, download_name=os.path.splitext(file.filename)[0] + ".pdf")
+    output_path = os.path.join(JPEG2PDF_FOLDER, f"{file_id}_output.pdf")
+
+    try:
+        image = Image.open(file.stream).convert("RGB")
+        image.save(output_path, "PDF", resolution=100.0)
+        return send_file(output_path, as_attachment=True, download_name="converted.pdf")
+    except Exception as e:
+        return f"Error converting JPG to PDF: {str(e)}", 500
 
 if __name__ == "__main__":
     app.run(debug=True)
